@@ -5,3 +5,11 @@ edition = "2024"
 
 [dependencies]
 tokio = {workspace = true}
+serde_json = {workspace = true}
+thiserror = {workspace = true}
+tokio-tungstenite = "0.28.0"
+tungstenite = "0.28.0"
+serde = {workspace = true}
+futures-channel = "0.3.32"
+futures-util = "0.3.32"
+
