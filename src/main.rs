@@ -9,6 +9,7 @@ use serde_json::json;
 use smarthy_engine::switch::SmartSwitch;
 use std::sync::atomic::AtomicBool;
 use tracing_subscriber::EnvFilter;
+use smarthy_engine::ws::WebSocketServer;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
@@ -30,19 +31,8 @@ async fn main() -> Result<(), AppError> {
 
     info!("Config used: {}\n{config:#?}", cli.config);
 
-    let mut x = SmartSwitch {
-        url: "ws://192.168.13.66/rpc".to_string(),
-        query: json!({
-            "id": 1,
-            "src": "rust-client",
-            "method": "Temperature.GetStatus",
-            "params": { "id": 101 }
-        }),
-        current_state: AtomicBool::new(false),
-        set_state: AtomicBool::new(false),
-    };
+    let ws = WebSocketServer::new("0.0.0.0:8080")?;
+    ws.serve().await?;
 
-    x.poll_state().await?;
-    println!("Hello, world!");
     Ok(())
 }
