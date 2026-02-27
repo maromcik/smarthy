@@ -1,16 +1,38 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ptr::hash;
+use tracing::error;
+use tungstenite::{Message, Utf8Bytes};
+use crate::error::EngineError;
 
-pub type Temperatures = HashMap<String, Temperature>;
-pub type Switches = HashMap<String, Switch>;
-pub type Inputs = HashMap<String, Input>;
+pub type TemperatureMessages = HashMap<String, TemperatureMessage>;
+pub type SwitchMessages = HashMap<String, SwitchMessage>;
+pub type InputMessages = HashMap<String, InputMessage>;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ShellyMessage {
-    pub method: String,
-    pub src: String,
+pub enum MessageType {
+    NotifyStatus,
+    NotifyFullStatus,
+    Empty,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ShellyRawMessage {
+    #[serde(rename = "src")]
+    pub id: String,
+    pub method: MessageType,
     pub params: Params,
+}
+
+impl ShellyRawMessage {
+    pub fn from(bytes: Utf8Bytes) -> Result<Self, EngineError> {
+        match serde_json::from_str(&bytes) {
+            Ok(msg) => Ok(msg),
+            Err(e) => {
+                error!("Invalid text received: {bytes}: Error: {e}");
+                Err(EngineError::from(e))
+            },
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -20,15 +42,15 @@ pub struct Params {
 }
 
 impl Params {
-    pub fn temperatures(&self) -> HashMap<String, Temperature> {
+    pub fn temperatures(&self) -> HashMap<String, TemperatureMessage> {
         self.extract_prefixed("temperature:")
     }
 
-    pub fn switches(&self) -> HashMap<String, Switch> {
+    pub fn switches(&self) -> HashMap<String, SwitchMessage> {
         self.extract_prefixed("switch:")
     }
 
-    pub fn inputs(&self) -> HashMap<String, Input> {
+    pub fn inputs(&self) -> HashMap<String, InputMessage> {
         self.extract_prefixed("input:")
     }
 
@@ -46,21 +68,62 @@ impl Params {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Temperature {
-    pub id: u32,
-    #[serde(rename = "tC")]
-    pub tc: f64,
-    #[serde(rename = "tF")]
-    pub tf: f64,
+pub enum ShellyUpdateMessage {
+    FullStatus(SmartDeviceMessage),
+    Temperature(TemperatureMessage),
+    Switch(SwitchMessage),
+    Input(InputMessage),
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Switch {
+pub enum SendMessage {
+    Switch(SwitchMessage),
+    Pong,
+}
+
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SmartDeviceMessage {
+    pub id: String,
+    pub method: MessageType,
+    pub temperatures: TemperatureMessages,
+    pub switches: SwitchMessages,
+    pub inputs: InputMessages,
+}
+
+impl From<ShellyRawMessage> for SmartDeviceMessage {
+    fn from(msg: ShellyRawMessage) -> Self {
+        let temperatures = msg.params.temperatures();
+        let switches = msg.params.switches();
+        let inputs = msg.params.inputs();
+
+        let method = if inputs.is_empty() && switches.is_empty() && temperatures.is_empty() {
+            MessageType::Empty
+        } else {
+            msg.method
+        };
+        Self {
+            id: msg.id,
+            method,
+            temperatures,
+            switches,
+            inputs,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TemperatureMessage {
+    #[serde(rename = "tC")]
+    pub tc: f64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SwitchMessage {
     pub output: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Input {
-    pub id: u32,
+pub struct InputMessage {
     pub state: bool,
 }

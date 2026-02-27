@@ -13,4 +13,6 @@ tracing = {workspace = true}
 serde = {workspace = true}
 futures-channel = "0.3.32"
 futures-util = "0.3.32"
+atomic_float = "1.1.0"
+itertools = "0.14.0"
 

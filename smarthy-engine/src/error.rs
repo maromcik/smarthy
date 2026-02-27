@@ -12,6 +12,8 @@ pub enum EngineError {
     WebSocketError(String),
     #[error("Serialize/Deserialize error: {0}")]
     SerdeError(String),
+    #[error("This tungestenite message type cannot be deserialized")]
+    MessageTypeNotSupported,
 }
 
 impl Debug for EngineError {

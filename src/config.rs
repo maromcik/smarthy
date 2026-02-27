@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use crate::error::AppError;
 use clap::Parser;
 use config::Config;
 use serde::{Deserialize, Serialize};
+use smarthy_engine::config::{SmartDeviceConfig, SmartDevices, WsConfig};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -10,7 +12,7 @@ pub struct Cli {
         short,
         long,
         value_name = "CONFIG_FILE",
-        default_value = "smarthy.toml",
+        default_value = "smarthy.yaml",
         env = "SMARTHY_CONFIG_FILE"
     )]
     pub config: String,
@@ -24,6 +26,9 @@ pub struct AppConfig {
     pub app_log_level: String,
     #[serde(default = "default_log_level")]
     pub all_log_level: String,
+    pub ws_config: WsConfig,
+    #[serde(default)]
+    pub devices: SmartDevices,
 }
 
 impl AppConfig {

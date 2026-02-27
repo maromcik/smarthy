@@ -9,6 +9,7 @@ use serde_json::json;
 use smarthy_engine::switch::SmartSwitch;
 use std::sync::atomic::AtomicBool;
 use tracing_subscriber::EnvFilter;
+use smarthy_engine::init;
 use smarthy_engine::ws::WebSocketServer;
 
 #[tokio::main]
@@ -31,8 +32,7 @@ async fn main() -> Result<(), AppError> {
 
     info!("Config used: {}\n{config:#?}", cli.config);
 
-    let ws = WebSocketServer::new("0.0.0.0:8080")?;
-    ws.serve().await?;
+    init(config.ws_config, config.devices).await?;
 
     Ok(())
 }

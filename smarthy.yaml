@@ -1,0 +1,5 @@
+app_log_level: debug
+all_log_level: debug
+
+ws_config:
+  listen: 0.0.0.0:8080
